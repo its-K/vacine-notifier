@@ -6,9 +6,9 @@ import os
 import psycopg2
 
 ADD_LINK=range(1)
-conn = psycopg2.connect(host=os.environ['db_host'],database=os.environ['db'], user=os.environ['user'], password=os.environ['db_password'])
+conn = psycopg2.connect(host=os.environ.get('db_host'),database=os.environ.get('db'), user=os.environ.get('user'), password=os.environ.get('db_password'))
 cur = conn.cursor()
-token=os.environ['telegram_key']
+token=os.environ.get('telegram_key')
 def find_vacine_places(pincode,today,age):
     r=requests.get(("https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByPin?pincode=%s&date=%s" % (pincode,today))).json()
     sessions=r['sessions']
