@@ -6,7 +6,7 @@ import os
 import psycopg2
 
 ADD_LINK=range(1)
-conn = psycopg2.connect(host=os.environ.get('db_host'),database=os.environ.get('db'), user=os.environ.get('user'), password=os.environ.get('db_password'))
+conn = psycopg2.connect(host=os.environ.get('db_host'),database=os.environ.get('db'), user=os.environ.get('db_user'), password=os.environ.get('db_password'))
 cur = conn.cursor()
 token=os.environ.get('telegram_key')
 def find_vacine_places(pincode,today,age):
