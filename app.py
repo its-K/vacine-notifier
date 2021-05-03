@@ -4,7 +4,12 @@ import requests
 from datetime import date
 import os
 import psycopg2
-import json
+from dotenv import load_dotenv
+from cowin import CoWinAPI
+cowin = CoWinAPI()
+
+
+load_dotenv()
 
 
 ADD_LINK=range(1)
@@ -13,11 +18,7 @@ cur = conn.cursor()
 token=os.environ.get('telegram_key')
 def find_vacine_places(pincode,today,age):
     try:
-        r=requests.get(("https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByPin?pincode=%s&date=%s" % (pincode,today))).json()
-        print(r)
-        print(today)
-        print(pincode)
-        print("\n")
+        r=cowin.get_availability_by_pincode(pincode,today)
         sessions=r['sessions']
         cont=""
         for n in sessions:
@@ -47,7 +48,7 @@ def help(update, context):
 
 def insertuser(name,email,pincode,telegramid,age):
     try:
-        cur.execute("INSERT INTO users (name,email,pincode,msg_sent,telegram_id,age) VALUES ('%s','%s','%d',false,'%d','%d');" % (name,email,int(pincode),telegramid,int(age)) )
+        cur.execute("INSERT INTO users (name,email,pincode,msg_sent,chat_id,age) VALUES ('%s','%s','%d',false,'%d','%d');" % (name,email,int(pincode),telegramid,int(age)) )
         conn.commit()
         return 'Sucess'
     except Exception as e:
