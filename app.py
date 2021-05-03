@@ -4,6 +4,7 @@ import requests
 from datetime import date
 import os
 import psycopg2
+import json
 
 ADD_LINK=range(1)
 conn = psycopg2.connect(host=os.environ.get('db_host'),database=os.environ.get('db'), user=os.environ.get('db_user'), password=os.environ.get('db_password'))
@@ -11,6 +12,7 @@ cur = conn.cursor()
 token=os.environ.get('telegram_key')
 def find_vacine_places(pincode,today,age):
     r=requests.get(("https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByPin?pincode=%s&date=%s" % (pincode,today))).json()
+    print(r)
     sessions=r['sessions']
     cont=""
     for n in sessions:
