@@ -5,17 +5,16 @@ from datetime import date
 import os
 import psycopg2
 import json
+from cowin import CoWinAPI
+
+cowin = CoWinAPI()
 
 ADD_LINK=range(1)
 conn = psycopg2.connect(host=os.environ.get('db_host'),database=os.environ.get('db'), user=os.environ.get('db_user'), password=os.environ.get('db_password'))
 cur = conn.cursor()
 token=os.environ.get('telegram_key')
-def find_vacine_places(pincode,today,age):
-    r=requests.get(("https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByPin?pincode=%s&date=%s" % (pincode,today))).json()
-    print(r)
-    print(today)
-    print(pincode)
-    print("\n")
+def find_vacine_places(pincode,age):
+    r = cowin.get_availability_by_pincode(pincode)
     sessions=r['sessions']
     cont=""
     for n in sessions:
@@ -31,9 +30,8 @@ def find_vacine_places(pincode,today,age):
     return cont
 
 def find_vacine(update, context):
-    today = date.today().strftime("%d-%m-%Y")
     pincode = context.args[0]
-    res=find_vacine_places(pincode,today,45)
+    res=find_vacine_places(pincode,45)
     update.message.reply_text(res)
 
 def help(update, context):
