@@ -13,6 +13,9 @@ token=os.environ.get('telegram_key')
 def find_vacine_places(pincode,today,age):
     r=requests.get(("https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByPin?pincode=%s&date=%s" % (pincode,today))).json()
     print(r)
+    print(today)
+    print(pincode)
+    print("\n")
     sessions=r['sessions']
     cont=""
     for n in sessions:
