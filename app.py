@@ -5,33 +5,41 @@ from datetime import date
 import os
 import psycopg2
 import json
-from cowin import CoWinAPI
 
-cowin = CoWinAPI()
 
 ADD_LINK=range(1)
 conn = psycopg2.connect(host=os.environ.get('db_host'),database=os.environ.get('db'), user=os.environ.get('db_user'), password=os.environ.get('db_password'))
 cur = conn.cursor()
 token=os.environ.get('telegram_key')
-def find_vacine_places(pincode,age):
-    r = cowin.get_availability_by_pincode(pincode)
-    sessions=r['sessions']
-    cont=""
-    for n in sessions:
-        if n['min_age_limit']<=age:
-            kk=""
-            cont+="Name: %s, District: %s, State: %s\n"%(n['name'],n['district_name'],n['state_name'])
-            cont+="Vaccine: %s, Date: %s\n"%(n['vaccine'],n['date'])
-            cont+="Available: %s, Type: %s, Fee: %s, MinAge: %s\n"%(n['available_capacity'],n['fee_type'],n['fee'],n['min_age_limit'])
-            for m in n['slots']:
-                kk+=m+", "
-            cont+="Slots: "+kk+"\n"
-            cont+="*********************************************\n"
-    return cont
+def find_vacine_places(pincode,today,age):
+    try:
+        r=requests.get(("https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByPin?pincode=%s&date=%s" % (pincode,today))).json()
+        print(r)
+        print(today)
+        print(pincode)
+        print("\n")
+        sessions=r['sessions']
+        cont=""
+        for n in sessions:
+            if n['min_age_limit']<=age:
+                kk=""
+                cont+="Name: %s, District: %s, State: %s\n"%(n['name'],n['district_name'],n['state_name'])
+                cont+="Vaccine: %s, Date: %s\n"%(n['vaccine'],n['date'])
+                cont+="Available: %s, Type: %s, Fee: %s, MinAge: %s\n"%(n['available_capacity'],n['fee_type'],n['fee'],n['min_age_limit'])
+                for m in n['slots']:
+                    kk+=m+", "
+                cont+="Slots: "+kk+"\n"
+                cont+="*********************************************\n"
+        return cont
+    except requests.exceptions.Timeout as e:
+        print(e)
+    except requests.exceptions.RequestException as e:
+        print(e)
 
 def find_vacine(update, context):
+    today = date.today().strftime("%d-%m-%Y")
     pincode = context.args[0]
-    res=find_vacine_places(pincode,45)
+    res=find_vacine_places(pincode,today,45)
     update.message.reply_text(res)
 
 def help(update, context):
