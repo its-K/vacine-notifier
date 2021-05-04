@@ -62,18 +62,30 @@ def find_vaccine_places_week(pincode,today):
 
 def find_vaccine(update, context):
     today = date.today().strftime("%d-%m-%Y")
-    pincode = context.args[0]
-    res=find_vaccine_places_pin(pincode,today)
-    update.message.reply_text(res)
+    if context.args:
+        pincode = context.args[0]
+        res=find_vaccine_places_pin(pincode,today)
+        if len(res)>20:
+            update.message.reply_text(res)
+        else:
+            update.message.reply_text("No slots found")
+    else:
+        update.message.reply_text("Incorrect pincode\n eg: /findvaccine 642122")
 
 def find_vaccine_week(update, context):
     today = date.today().strftime("%d-%m-%Y")
-    pincode = context.args[0]
-    res=find_vaccine_places_week(pincode,today)
-    update.message.reply_text(res)
+    if context.args:
+        pincode = context.args[0]
+        res=find_vaccine_places_week(pincode,today)
+        if len(res)>20:
+            update.message.reply_text(res)
+        else:
+            update.message.reply_text("No slots found")
+    else:
+        update.message.reply_text("Incorrect pincode\n eg: /findvaccineweek 642122")
 
 def help(update, context):
-    update.message.reply_text("/findvaccine Pincode -gets vacine availability details\n/register Pincode -register for notification when vacine available\n/findvaccineweek Pincode -gets vacine availability details for a week\n/unregister - Unregister for vacine availabilty notifications")
+    update.message.reply_text("/findvaccine Pincode -gets vacine availability details\n/register Pincode -register for notification when vacine available\n/findvaccineweek Pincode -gets vacine availability details for a week\n/unregister - Unregister for vacine availabilty notifications\n/status - Know your registeration status\n/info - About")
 
 def check_user(chat_id):
     cur.execute("select * from users where chat_id=%d"%chat_id)
@@ -95,40 +107,57 @@ def start(update, context):
     """Echo the user message."""
     update.message.reply_text(update.message.text)
 
+def status(update,context):
+    chat_id = update.message.chat.id
+    if check_user(chat_id):
+        update.message.reply_text("Hurray 🎉\nYou are registered for notifications")
+    else:
+        update.message.reply_text("Oops ! You are not registered for notifications\nTo register /register")
+
+def bot_info(update,context):
+    update.message.reply_text("This Bot is created and maintained by Kishore 😎\nTo fork this project visit https://github.com/its-K/vacine-notifier .")
+
 def registerhandle(update, context):
     bot = context.bot
     chat_id = update.message.chat.id
     kk= context.args
     if len(kk)==0:
         update.message.reply_text("Send as /register Pincode")
-    context.user_data['pincode']=kk[0]
-    bot.send_message(
-            chat_id=chat_id,
-            text="Enter name followed by email and age\n Eg: Kishore kishore@example.com 21"
-    )
-    return ADD_LINK
+    else:
+        context.user_data['pincode']=kk[0]
+        bot.send_message(
+                chat_id=chat_id,
+                text="Enter name followed by email and age\n Eg: Kishore kishore@example.com 21"
+        )
+        return ADD_LINK
 
 def register(update, context):
     bot = context.bot
     chat_id = update.message.chat.id
     ove= (update.message.text).split(" ")
-    name=""
-    age=ove[-1]
-    email=ove[len(ove)-2]
-    for n in  range(len(ove)-2):
-        name+=ove[n]+" "
-    if not check_user(chat_id):
-        insertuser(name,email,context.user_data['pincode'],chat_id,age)
-        bot.send_message(
-                chat_id=chat_id,
-                text="You have registered sucessfully."
-        )
+    if len(ove)>=3:
+        name=""
+        age=ove[-1]
+        email=ove[len(ove)-2]
+        for n in  range(len(ove)-2):
+            name+=ove[n]+" "
+        if not check_user(chat_id):
+            insertuser(name,email,context.user_data['pincode'],chat_id,age)
+            bot.send_message(
+                    chat_id=chat_id,
+                    text="You have registered sucessfully."
+            )
+        else:
+            bot.send_message(
+                    chat_id=chat_id,
+                    text="You have already registered."
+            )
+        return ConversationHandler.END
     else:
         bot.send_message(
-                chat_id=chat_id,
-                text="You have already registered."
-        )
-    return ConversationHandler.END
+                    chat_id=chat_id,
+                    text="Incorrect format.\n Eg: Kishore kishore@example.com 21"
+            )
 
 def unregister(update, context):
     chat_id = update.message.chat.id
@@ -159,6 +188,8 @@ def main():
     dp.add_handler(CommandHandler("help", help))
     dp.add_handler(CommandHandler("findvaccine", find_vaccine))
     dp.add_handler(CommandHandler("unregister", unregister))
+    dp.add_handler(CommandHandler("status", status))
+    dp.add_handler(CommandHandler("info", bot_info))
     dp.add_handler(CommandHandler("findvaccineweek", find_vaccine_week))
     dp.add_handler(registeration)
 
