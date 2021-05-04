@@ -1,5 +1,4 @@
-import telegram
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters,callbackqueryhandler, ConversationHandler
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler
 import requests
 from datetime import date
 import os
@@ -16,35 +15,73 @@ ADD_LINK=range(1)
 conn = psycopg2.connect(host=os.environ.get('db_host'),database=os.environ.get('db'), user=os.environ.get('db_user'), password=os.environ.get('db_password'))
 cur = conn.cursor()
 token=os.environ.get('telegram_key')
-def find_vacine_places(pincode,today,age):
+
+def find_vaccine_places_pin(pincode,today):
     try:
         r=cowin.get_availability_by_pincode(pincode,today)
         sessions=r['sessions']
         cont=""
         for n in sessions:
-            if n['min_age_limit']<=age:
-                kk=""
-                cont+="Name: %s, District: %s, State: %s\n"%(n['name'],n['district_name'],n['state_name'])
-                cont+="Vaccine: %s, Date: %s\n"%(n['vaccine'],n['date'])
-                cont+="Available: %s, Type: %s, Fee: %s, MinAge: %s\n"%(n['available_capacity'],n['fee_type'],n['fee'],n['min_age_limit'])
-                for m in n['slots']:
-                    kk+=m+", "
-                cont+="Slots: "+kk+"\n"
-                cont+="*********************************************\n"
+            kk=""
+            cont+="Name: %s, District: %s, State: %s\n"%(n['name'],n['district_name'],n['state_name'])
+            cont+="Vaccine: %s, Date: %s\n"%(n['vaccine'],n['date'])
+            cont+="Available: %s, Type: %s, Fee: %s, MinAge: %s\n"%(n['available_capacity'],n['fee_type'],n['fee'],n['min_age_limit'])
+            for m in n['slots']:
+                kk+=m+", "
+            cont+="Slots: "+kk+"\n"
+            cont+="*********************************************\n"
+        cont+="Always Wear Mask"
         return cont
     except requests.exceptions.Timeout as e:
         print(e)
     except requests.exceptions.RequestException as e:
         print(e)
 
-def find_vacine(update, context):
+def find_vaccine_places_week(pincode,today):
+    try:
+        r=cowin.get_availability_by_pincode_week(pincode,today)
+        sessions=r['centers']
+        cont=""
+        for n in sessions: 
+            cont+="Name: %s, District: %s, State: %s\n"%(n['name'],n['district_name'],n['state_name'])
+            cont+="Available slots:\n"
+            for p in n['sessions']:
+                kk=""
+                cont+="\nDate: %s, Vaccine: %s\n"%(p['date'],p['vaccine'])
+                cont+="Available: %s, Type: %s, MinAge: %s\n"%(p['available_capacity'],n['fee_type'],p['min_age_limit'])
+                for m in p['slots']:
+                    kk+=m+", "
+                cont+="Slots: "+kk+"\n"
+            cont+="*********************************************\n"
+        cont+="Always Wear Mask"
+        return cont
+    except requests.exceptions.Timeout as e:
+        print(e)
+    except requests.exceptions.RequestException as e:
+        print(e)
+
+def find_vaccine(update, context):
     today = date.today().strftime("%d-%m-%Y")
     pincode = context.args[0]
-    res=find_vacine_places(pincode,today,45)
+    res=find_vaccine_places_pin(pincode,today)
+    update.message.reply_text(res)
+
+def find_vaccine_week(update, context):
+    today = date.today().strftime("%d-%m-%Y")
+    pincode = context.args[0]
+    res=find_vaccine_places_week(pincode,today)
     update.message.reply_text(res)
 
 def help(update, context):
-    update.message.reply_text("/findvaccine Pincode ")
+    update.message.reply_text("/findvaccine Pincode -gets vacine availability details\n/register Pincode -register for notification when vacine available\n/findvaccineweek Pincode -gets vacine availability details for a week\n/unregister - Unregister for vacine availabilty notifications")
+
+def check_user(chat_id):
+    cur.execute("select * from users where chat_id=%d"%chat_id)
+    users=cur.fetchall()
+    conn.commit()
+    if users:
+        return True
+    return False
 
 def insertuser(name,email,pincode,telegramid,age):
     try:
@@ -80,28 +117,27 @@ def register(update, context):
     email=ove[len(ove)-2]
     for n in  range(len(ove)-2):
         name+=ove[n]+" "
-    insertuser(name,email,context.user_data['pincode'],chat_id,age)
-    bot.send_message(
-            chat_id=chat_id,
-            text="You have registered sucessfully."
-    )
+    if not check_user(chat_id):
+        insertuser(name,email,context.user_data['pincode'],chat_id,age)
+        bot.send_message(
+                chat_id=chat_id,
+                text="You have registered sucessfully."
+        )
+    else:
+        bot.send_message(
+                chat_id=chat_id,
+                text="You have already registered."
+        )
     return ConversationHandler.END
 
-def reset_msg_sent():
-    cur.execute("UPDATE users SET msg_sent = false;")
-    conn.commit()
-
-def check_vaccine_availability():
-    cur.execute("SELECT * FROM users;")
-    users=cur.fetchall()
-    today = date.today().strftime("%d-%m-%Y")
-    bot = telegram.Bot(token=token)
-    for n in users:
-        res=find_vacine_places(n[3],today,int(n[6]))
-        if len(res)>10 and n[4]==False:
-            bot.sendMessage(chat_id=n[5], text=res)
-            cur.execute("UPDATE users SET msg_sent=true where user_id=%s"%n[0])
-            conn.commit()
+def unregister(update, context):
+    chat_id = update.message.chat.id
+    if check_user(chat_id):
+        cur.execute("Delete from users where chat_id=%d"%chat_id)
+        conn.commit()
+        update.message.reply_text("You have unregistered for notifications")
+    else:
+        update.message.reply_text("You are not registered.")
 
 def main():
     updater = Updater(token, use_context=True)
@@ -121,9 +157,10 @@ def main():
 
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", help))
-    dp.add_handler(CommandHandler("findvaccine", find_vacine))
+    dp.add_handler(CommandHandler("findvaccine", find_vaccine))
+    dp.add_handler(CommandHandler("unregister", unregister))
+    dp.add_handler(CommandHandler("findvaccineweek", find_vaccine_week))
     dp.add_handler(registeration)
-    #dp.add_handler(MessageHandler(Filters.text, echo))
 
     updater.start_polling()
     updater.idle()
