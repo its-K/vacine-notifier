@@ -19,7 +19,7 @@ def find_vacine_places(pincode,today,age,cont):
         r = cowin.get_availability_by_pincode(pincode,today)
         sessions=r['sessions']
         for n in sessions:
-            if n['min_age_limit']<=age:
+            if n['min_age_limit']<=age and n['available_capacity']>=1:
                 kk=""
                 cont+="Name: %s, District: %s, State: %s\n"%(n['name'],n['district_name'],n['state_name'])
                 cont+="Vaccine: %s, Date: %s\n"%(n['vaccine'],n['date'])
@@ -28,7 +28,7 @@ def find_vacine_places(pincode,today,age,cont):
                     kk+=m+", "
                 cont+="Slots: "+kk+"\n"
                 cont+="*********************************************\n"
-        cont+="Always Wear Mask"
+        cont+="Stay Home Stay Safe"
         return cont
     except requests.exceptions.Timeout as e:
         print(e)

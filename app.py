@@ -30,7 +30,7 @@ def find_vaccine_places_pin(pincode,today):
                 kk+=m+", "
             cont+="Slots: "+kk+"\n"
             cont+="*********************************************\n"
-        cont+="Always Wear Mask"
+        cont+="Stay Home Stay Safe"
         return cont
     except requests.exceptions.Timeout as e:
         print(e)
@@ -53,7 +53,7 @@ def find_vaccine_places_week(pincode,today):
                     kk+=m+", "
                 cont+="Slots: "+kk+"\n"
             cont+="*********************************************\n"
-        cont+="Always Wear Mask"
+        cont+="Stay Home Stay Safe"
         return cont
     except requests.exceptions.Timeout as e:
         print(e)
@@ -104,8 +104,7 @@ def insertuser(name,email,pincode,telegramid,age):
         return e
 
 def start(update, context):
-    """Echo the user message."""
-    update.message.reply_text(update.message.text)
+    update.message.reply_text("This Bot is used to find information regarding Covid Vaccine availability centers and vaccine availability notification when registered")
 
 def status(update,context):
     chat_id = update.message.chat.id
