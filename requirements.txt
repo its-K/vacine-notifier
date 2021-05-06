@@ -1,4 +1,5 @@
 python-telegram-bot
 requests
-psycopg2-binary
+mysql.connector
 cowin-vaccine-api
+telegram

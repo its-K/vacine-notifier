@@ -2,17 +2,14 @@ import telegram
 import requests
 from datetime import date
 import os
-import psycopg2
-import json
 from dotenv import load_dotenv
 from cowin import CoWinAPI
 import sys
+import mysql.connector
 
 load_dotenv()
 
 cowin = CoWinAPI()
-conn = psycopg2.connect(host=os.environ.get('db_host'),database=os.environ.get('db'), user=os.environ.get('db_user'), password=os.environ.get('db_password'))
-cur = conn.cursor()
 token=os.environ.get('telegram_key')
 def find_vacine_places(pincode,today,age,cont):
     try:
@@ -36,6 +33,11 @@ def find_vacine_places(pincode,today,age,cont):
         print(e)
 
 def check_vaccine_availability():
+    conn = mysql.connector.connect(host=os.environ.get('db_host'),
+                                          database=os.environ.get('db'),
+                                          user=os.environ.get('db_user'),
+                                          password=os.environ.get('db_password'))
+    cur = conn.cursor()
     cur.execute("SELECT * FROM users;")
     users=cur.fetchall()
     today = date.today().strftime("%d-%m-%Y")
@@ -43,12 +45,18 @@ def check_vaccine_availability():
     for n in users:
         me="Hey "+n[1]+" 🎉 \nVacine Available 😊\n"
         res=find_vacine_places(n[3],today,int(n[6]),me)
-        if len(res)>10 and n[5]==False:
+        if len(res)>160 and n[5]==0:
             bot.sendMessage(chat_id=n[6], text=res)
             cur.execute("UPDATE users SET msg_sent=true where user_id=%s"%n[0])
             conn.commit()
+            
 
 def reset_msg_sent():
+    conn = mysql.connector.connect(host=os.environ.get('db_host'),
+                                          database=os.environ.get('db'),
+                                          user=os.environ.get('db_user'),
+                                          password=os.environ.get('db_password'))
+    cur = conn.cursor()
     cur.execute("UPDATE users SET msg_sent = false;")
     conn.commit()
 

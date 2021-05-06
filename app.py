@@ -5,14 +5,17 @@ import os
 import psycopg2
 from dotenv import load_dotenv
 from cowin import CoWinAPI
+import mysql.connector
 cowin = CoWinAPI()
-
 
 load_dotenv()
 
 
 ADD_LINK=range(1)
-conn = psycopg2.connect(host=os.environ.get('db_host'),database=os.environ.get('db'), user=os.environ.get('db_user'), password=os.environ.get('db_password'))
+conn = mysql.connector.connect(host=os.environ.get('db_host'),
+                                          database=os.environ.get('db'),
+                                          user=os.environ.get('db_user'),
+                                          password=os.environ.get('db_password'))
 cur = conn.cursor()
 token=os.environ.get('telegram_key')
 
@@ -65,7 +68,7 @@ def find_vaccine(update, context):
     if context.args:
         pincode = context.args[0]
         res=find_vaccine_places_pin(pincode,today)
-        if len(res)>20:
+        if len(res)>60:
             update.message.reply_text(res)
         else:
             update.message.reply_text("No slots found")
@@ -77,7 +80,7 @@ def find_vaccine_week(update, context):
     if context.args:
         pincode = context.args[0]
         res=find_vaccine_places_week(pincode,today)
-        if len(res)>20:
+        if len(res)>60:
             update.message.reply_text(res)
         else:
             update.message.reply_text("No slots found")
@@ -88,6 +91,11 @@ def help(update, context):
     update.message.reply_text("/findvaccine Pincode -gets vacine availability details\n/register Pincode -register for notification when vacine available\n/findvaccineweek Pincode -gets vacine availability details for a week\n/unregister - Unregister for vacine availabilty notifications\n/status - Know your registeration status\n/info - About")
 
 def check_user(chat_id):
+    conn = mysql.connector.connect(host=os.environ.get('db_host'),
+                                          database=os.environ.get('db'),
+                                          user=os.environ.get('db_user'),
+                                          password=os.environ.get('db_password'))
+    cur = conn.cursor()
     cur.execute("select * from users where chat_id=%d"%chat_id)
     users=cur.fetchall()
     conn.commit()
@@ -96,6 +104,11 @@ def check_user(chat_id):
     return False
 
 def insertuser(name,email,pincode,telegramid,age):
+    conn = mysql.connector.connect(host=os.environ.get('db_host'),
+                                          database=os.environ.get('db'),
+                                          user=os.environ.get('db_user'),
+                                          password=os.environ.get('db_password'))
+    cur = conn.cursor()
     try:
         cur.execute("INSERT INTO users (name,email,pincode,msg_sent,chat_id,age) VALUES ('%s','%s','%d',false,'%d','%d');" % (name,email,int(pincode),telegramid,int(age)) )
         conn.commit()
@@ -104,7 +117,19 @@ def insertuser(name,email,pincode,telegramid,age):
         return e
 
 def start(update, context):
-    update.message.reply_text("This Bot is used to find information regarding Covid Vaccine availability centers and vaccine availability notification when registered")
+    conn = mysql.connector.connect(host=os.environ.get('db_host'),
+                                          database=os.environ.get('db'),
+                                          user=os.environ.get('db_user'),
+                                          password=os.environ.get('db_password'))
+    cur = conn.cursor()
+    chat_id = update.message.chat.id
+    name=update.message.from_user.first_name
+    cur.execute("select * from logs where chat_id=%d"%chat_id)
+    users=cur.fetchall()
+    if not users:
+        cur.execute("insert into logs (chat_id,user_name) values (%d,'%s')"%(chat_id,name))
+    conn.commit()
+    update.message.reply_text("This Bot is used to find information regarding Covid Vaccine availability centers and vaccine availability notification when registered\nTo get started send /help")
 
 def status(update,context):
     chat_id = update.message.chat.id
@@ -114,7 +139,7 @@ def status(update,context):
         update.message.reply_text("Oops ! You are not registered for notifications\nTo register /register")
 
 def bot_info(update,context):
-    update.message.reply_text("This Bot is created and maintained by Kishore 😎\nTo fork this project visit https://github.com/its-K/vacine-notifier .")
+    update.message.reply_text("This Bot is created and maintained by Kishore 😎\nTo support this project @ kishore4110@gmail.com\nTo fork this project visit https://github.com/its-K/vacine-notifier .")
 
 def registerhandle(update, context):
     bot = context.bot
@@ -159,6 +184,11 @@ def register(update, context):
             )
 
 def unregister(update, context):
+    conn = mysql.connector.connect(host=os.environ.get('db_host'),
+                                          database=os.environ.get('db'),
+                                          user=os.environ.get('db_user'),
+                                          password=os.environ.get('db_password'))
+    cur = conn.cursor()
     chat_id = update.message.chat.id
     if check_user(chat_id):
         cur.execute("Delete from users where chat_id=%d"%chat_id)
