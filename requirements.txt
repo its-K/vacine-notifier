@@ -3,3 +3,4 @@ requests
 mysql.connector
 cowin-vaccine-api
 telegram
+python-dotenv

@@ -2,7 +2,6 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Conve
 import requests
 from datetime import date
 import os
-import psycopg2
 from dotenv import load_dotenv
 from cowin import CoWinAPI
 import mysql.connector
